@@ -1,38 +1,103 @@
 using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.SceneManagement;
+using UnityEngine.InputSystem;
+using Unity.VisualScripting;
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
+    public GameState currentState { get; private set; }
+    private UnityEvent<GameState> OnStateChanged;
 
-    public GameState currentState;
 
     void Awake()
     {
-        Instance = this;
+        if (Instance == null) Instance = this;
+        else Destroy(gameObject);
     }
 
     void Start()
     {
-        currentState = GameState.Playing;
+        UpdateState(GameState.MainMenu);
     }
 
+    public void UpdateState(GameState newState)
+    {
+       currentState = newState;
+
+        switch (newState)
+        {
+            case GameState.MainMenu:
+                OnMainMenu();
+                break;
+             case GameState.Playing:
+                OnPlaying();
+                break;
+            case GameState.Paused:
+                PauseGame();
+                break;
+            case GameState.GameOver:
+                GameOver();
+                break;
+
+        }
+        OnStateChanged?.Invoke(newState);
+    }
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
+        if (currentState == GameState.Paused && Input.GetKeyDown(KeyCode.Escape))
+        {
+            Resume();
+        } 
+        else if (currentState != GameState.Paused && Input.GetKeyDown(KeyCode.Escape))
         {
             PauseGame();
         }
+        else if (currentState == GameState.GameOver && Input.GetKeyDown(KeyCode.Space))
+        {
+            RestartGame();
+        }
     }
 
+    private void OnMainMenu()
+    {
+        Time.timeScale = 1f;
+        Debug.Log("Lagi di menu");
+    }
+    private void OnPlaying()
+    {
+        Time.timeScale = 1f;
+        Debug.Log("Game dimulai");
+    }
     public void PauseGame()
     {
         Time.timeScale = 0f;
+        Debug.Log("Game Stopped");
         currentState = GameState.Paused;
+    }
+    public void Resume()
+    {
+        Time.timeScale = 1f;
+        Debug.Log("Game jalan lagi");
+        currentState = GameState.Playing;
+    }
+    public void RestartGame()
+    {
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        Debug.Log("Game Diulang");
+        StartGame();
     }
 
     public void GameOver()
     {
-        Debug.Log("Game Over");
+        Time.timeScale = 0f;
+        Debug.Log("kalah");
         currentState = GameState.GameOver;
     }
+       public void StartGame() => UpdateState(GameState.Playing);
+        public void OnPause() => UpdateState(GameState.Paused);
+        public void ResumeGame() => UpdateState(GameState.Playing);
+        public void Defeat() => UpdateState(GameState.GameOver);
 }
